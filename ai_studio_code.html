@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fancy Image Book Creator</title>
+    <style>
+        :root {
+            --primary-color: #5E35B1; /* Deep Purple */
+            --primary-variant-color: #4527A0;
+            --secondary-color: #00897B; /* Teal */
+            --background-color: #F5F5F5;
+            --surface-color: #FFFFFF;
+            --on-primary-color: #FFFFFF;
+            --on-surface-color: #212121;
+            --app-bar-height: 56px;
+            --fab-height: 72px;
+        }
+
+        /* --- App Structure & Android Feel --- */
+        html { height: 100%; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--on-surface-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+        .app-bar {
+            background-color: var(--primary-color);
+            color: var(--on-primary-color);
+            height: var(--app-bar-height);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-size: 1.25em;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .main-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 16px 16px var(--fab-height) 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .fab-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(245,245,245,1) 80%, rgba(245,245,245,0));
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        .fab-container button {
+            background-color: var(--secondary-color);
+            color: var(--on-primary-color);
+            border: none;
+            padding: 16px 32px;
+            border-radius: 28px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 500;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        .fab-container button:hover { background-color: #00695C; box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+        .fab-container button:disabled { background-color: #BDBDBD; box-shadow: none; cursor: not-allowed; }
+        #editor-nav { width: 100%; display: flex; justify-content: space-between; }
+
+
+        /* --- UI Components (Cards, Forms) --- */
+        .card {
+            background-color: var(--surface-color);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            width: 100%;
+            max-width: 700px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+        .card h3 { margin-top: 0; border-bottom: 1px solid #E0E0E0; padding-bottom: 8px; font-weight: 500; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .card input, .card textarea, .card select {
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #BDBDBD; box-sizing: border-box; background-color: #FAFAFA;
+        }
+
+        .upload-card { text-align: center; }
+        #image-upload { display: none; }
+        .upload-label {
+            background-color: var(--primary-color); color: var(--on-primary-color); padding: 12px 24px; border-radius: 24px;
+            cursor: pointer; display: inline-block; font-weight: 500; transition: background-color 0.3s;
+        }
+        .upload-label:hover { background-color: var(--primary-variant-color); }
+        
+        .page-editor-card { display: flex; gap: 16px; align-items: flex-start; }
+        .page-editor-card .page-number { font-weight: bold; color: var(--primary-color); }
+        .page-editor-card img { width: 100px; height: 100px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+        .page-editor-card .inputs { flex-grow: 1; }
+        .page-editor-card .style-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="app-bar">Fancy Image Book Creator</div>
+
+    <div class="main-content">
+        <div id="upload-step" class="card upload-card">
+            <h3>Start Here</h3>
+            <label for="image-upload" class="upload-label">Upload Your Images</label>
+            <input type="file" id="image-upload" accept="image/*" multiple>
+        </div>
+
+        <div id="book-config-step" class="card" style="display: none;">
+             <h3>Book Details & Cover Design</h3>
+             <div class="form-grid">
+                <input type="text" id="book-title" placeholder="Book Title">
+                <input type="text" id="author-name" placeholder="Author Name">
+             </div>
+             <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+             <div class="style-controls">
+                <select id="cover-template-select"></select>
+                <select id="cover-font-select"></select>
+                <input type="color" id="cover-color-picker" value="#333333">
+                <select id="cover-align-select"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+             </div>
+        </div>
+        
+        <div id="image-details-container"></div>
+    </div>
+
+    <div class="fab-container">
+        <div id="editor-nav" style="display: none;">
+            <button id="prev-step-btn">Previous</button>
+            <span style="flex-grow: 1; text-align: center; font-weight: 500;" id="step-indicator"></span>
+            <button id="next-step-btn">Next</button>
+        </div>
+        <button id="share-button" style="display: none;">Create & Download Book</button>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const imageUpload = document.getElementById('image-upload');
+        const uploadStep = document.getElementById('upload-step');
+        const bookConfigStep = document.getElementById('book-config-step');
+        const imageDetailsContainer = document.getElementById('image-details-container');
+        const shareButton = document.getElementById('share-button');
+        const editorNav = document.getElementById('editor-nav');
+        const prevStepBtn = document.getElementById('prev-step-btn');
+        const nextStepBtn = document.getElementById('next-step-btn');
+        const stepIndicator = document.getElementById('step-indicator');
+        const coverTemplateSelect = document.getElementById('cover-template-select');
+        const coverFontSelect = document.getElementById('cover-font-select');
+        const coverColorPicker = document.getElementById('cover-color-picker');
+        const coverAlignSelect = document.getElementById('cover-align-select');
+
+        // --- Data ---
+        let pageData = [];
+        let coverData = { style: { templateKey: 'default', fontFamily: 'Roboto', textColor: '#333333', textAlign: 'left' } };
+        let currentEditingStep = 0; // 0 for config, 1+ for pages
+        
+        const templates = { "default":{name:"Default Light",css:".book-page { background: #fff; color: #333; }"},"dark":{name:"Modern Dark",css:".book-page { background: #1a1a1a; color: #f0f0f0; } .book-page h1, .book-page h2 { border-bottom: 1px solid #444; }"},"leather":{name:"Classic Leather",css:".book-page { background: linear-gradient(to right, #8a5a2a, #a06b3e); color: #fff; text-shadow: 1px 1px 2px #5c3c1b; border: 10px solid #5c3c1b; }"},"sunset":{name:"Sunset Gradient",css:".book-page { background: linear-gradient(135deg, #ff7e5f, #feb47b); color: #fff; }"},"ocean":{name:"Oceanic Waves",css:".book-page { background: linear-gradient(to right, #2c3e50, #4ca1af); color: #fff; }"},"vintage":{name:"Vintage Paper",css:".book-page { background: #fdf5e6; color: #5a4f41; border: 1px solid #dcd2c4; }"},"slate":{name:"Cool Slate",css:".book-page { background: #708090; color: #ffffff; }"},"floral":{name:"Floral Garden",css:".book-page { background-color: #f5f5dc; background-image: url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"%3E%3Cg fill-rule=\"evenodd\"%3E%3Cg fill=\"%239C92AC\" fill-opacity=\"0.1\"%3E%3Cpath opacity=\".5\" d=\"M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z\"/%3E%3Cpath d=\"M6 5V0h1v5h9V0h1v5h9V0h1v5h9V0h1v5h9V0h1v5h9V0h1v5h9V0h1v5h9V0h1v5h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h-1v-9h-9v9h-1v-9h-9v9h-1v-9h-9v9h-1v-9h-9v9h-1v-9h-9v9h-1v-9h-9v9h-1v-9h-9v9H6v-1h9v-9H6v-1h9v-9H6v-1h9v-9H6v-1h9v-9H6v-1h9v-9H6v-1h9v-9H6v-1h9v-9H6v-1h9V5H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E'); }"},"mint":{name:"Refreshing Mint",css:".book-page { background-color: #e0f2f1; color: #004d40; }"},"rose":{name:"Rose Gold",css:".book-page { background: #f7cac9; color: #92a8d1; }"},"nebula":{name:"Cosmic Nebula",css:".book-page { background: #000000; background-image: radial-gradient(circle at 100% 100%, #3e0052, #00002c 40%, #000 70%); color: #fff; }"},"forest":{name:"Enchanted Forest",css:".book-page { background: #3d550c; color: #ecf39e; }"},"gothic":{name:"Gothic Noir",css:".book-page { background: #000; color: #c00; border: 5px solid #555; }"},"cyberpunk":{name:"Cyberpunk Glow",css:".book-page { background: #0c0c24; color: #00ffc3; text-shadow: 0 0 5px #00ffc3; border: 2px solid #ff00ff; }"},"parchment":{name:"Aged Parchment",css:".book-page { background-color: #fcf5e5; border: 1px solid #d3c4a4; color: #4a4130; }"},"journal":{name:"Notebook Journal",css:".book-page { background-color: #fff; color: #333; background-image: linear-gradient(#eee .1em, transparent .1em); background-size: 100% 1.5em; }"},"Blueprint":{name:"Blueprint Grid",css:".book-page { color: #fff; background-color:#345; background-image: linear-gradient(rgba(255,255,255,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.2) 1px, transparent 1px); background-size: 20px 20px; }"},"sunflower":{name:"Sunflower Field",css:".book-page { background: #ffc300; color: #588157; }"},"lavender":{name:"Lavender Dream",css:".book-page { background: #e6e6fa; color: #4b0082; }"},"marble":{name:"White Marble",css:".book-page { background: #fafafa; background-image: linear-gradient(45deg, #e3e3e3 25%, transparent 25%), linear-gradient(-45deg, #e3e3e3 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e3e3e3 75%), linear-gradient(-45deg, transparent 75%, #e3e3e3 75%); background-size: 20px 20px; color: #333; }"} };
+        const fonts = [ "Roboto", "Open Sans", "Lato", "Montserrat", "Oswald", "Raleway", "Merriweather", "Playfair Display", "Lora", "Nunito", "PT Sans", "Poppins", "Ubuntu", "Bebas Neue", "Caveat", "Dancing Script", "EB Garamond", "Fira Sans", "Inter", "Josefin Sans", "Libre Baskerville", "Lobster", "Mukta", "Noto Sans", "Pacifico", "Quicksand", "Righteous", "Shadows Into Light", "Slabo 27px", "Source Sans Pro", "Special Elite", "Teko", "Titillium Web", "Yanone Kaffeesatz", "Zilla Slab", "Cinzel", "Cormorant Garamond", "Fauna One", "Great Vibes", "Kalam", "Lexend Deca", "Marck Script", "Old Standard TT", "Orbitron", "Permanent Marker", "Philosopher", "Playball", "Russo One", "Satisfy", "Unica One" ];
+
+        // --- Initialization ---
+        function populateSelect(selectEl, options, isFonts = false) {
+            options.forEach(opt => {
+                const option = isFonts ? new Option(opt, opt) : new Option(templates[opt].name, opt);
+                if(isFonts) option.style.fontFamily = opt;
+                selectEl.add(option);
+            });
+        }
+        populateSelect(coverTemplateSelect, Object.keys(templates));
+        populateSelect(coverFontSelect, fonts, true);
+
+        // --- Event Listeners ---
+        imageUpload.addEventListener('change', handleImageUpload);
+        shareButton.addEventListener('click', handleDownload);
+        prevStepBtn.addEventListener('click', () => navigateEditor(-1));
+        nextStepBtn.addEventListener('click', () => navigateEditor(1));
+        [coverTemplateSelect, coverFontSelect, coverColorPicker, coverAlignSelect].forEach(el => {
+            el.addEventListener('input', () => {
+                coverData.style.templateKey = coverTemplateSelect.value;
+                coverData.style.fontFamily = coverFontSelect.value;
+                coverData.style.textColor = coverColorPicker.value;
+                coverData.style.textAlign = coverAlignSelect.value;
+            });
+        });
+        
+        // --- Functions ---
+        async function handleImageUpload(event) {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            const promises = files.map(readFileAsDataURL);
+            const dataUrls = await Promise.all(promises);
+
+            pageData = dataUrls.map(src => ({
+                src, title: '', description: '',
+            }));
+
+            renderPageEditorCards();
+            uploadStep.style.display = 'none';
+            editorNav.style.display = 'flex';
+            currentEditingStep = 0;
+            renderEditorStep();
+        }
+
+        function renderPageEditorCards() {
+            imageDetailsContainer.innerHTML = ''; // Clear previous
+            pageData.forEach((page, index) => {
+                const card = document.createElement('div');
+                card.className = 'card page-editor-card';
+                card.id = `page-editor-${index + 1}`;
+                card.style.display = 'none'; // Hidden by default
+                card.innerHTML = `
+                    <div><div class="page-number">Editing Page ${index + 1}</div><img src="${page.src}" alt="Page ${index + 1} Preview"></div>
+                    <div class="inputs">
+                        <input type="text" class="page-title" placeholder="Title for this page">
+                        <textarea class="page-desc" rows="3" placeholder="Description for this page"></textarea>
+                    </div>
+                `;
+                imageDetailsContainer.appendChild(card);
+                
+                card.querySelector('.page-title').addEventListener('input', e => { pageData[index].title = e.target.value; });
+                card.querySelector('.page-desc').addEventListener('input', e => { pageData[index].description = e.target.value; });
+            });
+        }
+
+        function navigateEditor(direction) {
+            const newStep = currentEditingStep + direction;
+            if (newStep >= 0 && newStep <= pageData.length) {
+                currentEditingStep = newStep;
+                renderEditorStep();
+            }
+        }
+
+        function renderEditorStep() {
+            bookConfigStep.style.display = 'none';
+            document.querySelectorAll('.page-editor-card').forEach(c => c.style.display = 'none');
+            
+            const totalSteps = pageData.length;
+            if (currentEditingStep === 0) {
+                bookConfigStep.style.display = 'block';
+                stepIndicator.textContent = 'Cover & Details';
+            } else {
+                document.getElementById(`page-editor-${currentEditingStep}`).style.display = 'flex';
+                stepIndicator.textContent = `Page ${currentEditingStep} of ${totalSteps}`;
+            }
+
+            prevStepBtn.disabled = currentEditingStep === 0;
+            if (currentEditingStep === totalSteps) {
+                nextStepBtn.style.display = 'none';
+                shareButton.style.display = 'block';
+            } else {
+                nextStepBtn.style.display = 'block';
+                shareButton.style.display = 'none';
+            }
+        }
+        
+        function handleDownload() {
+            const bookDetails = {
+                title: document.getElementById('book-title').value || 'My Fancy Image Book',
+                author: document.getElementById('author-name').value || 'Anonymous',
+                publishDate: new Date().toLocaleString()
+            };
+            const uniqueFonts = [coverData.style.fontFamily];
+            const bookHTML = generateBookHTML(bookDetails, coverData, pageData, uniqueFonts);
+            const blob = new Blob([bookHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${bookDetails.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function readFileAsDataURL(file) {
+            return new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function generateBookHTML(bookDetails, finalCoverData, finalPageDetails, uniqueFonts) {
+            const appUrl = 'YOUR_APPLICATION_URL_HERE'; 
+
+            const fontQuery = uniqueFonts.map(f => `family=${f.replace(/ /g, '+')}`).join('&');
+            
+            const coverStyle = finalCoverData.style;
+            const pageStyles = `${templates[coverStyle.templateKey].css.replace(/\.book-page/g, `.book-page`)} 
+                                .book-page { font-family: '${coverStyle.fontFamily}', sans-serif; color: ${coverStyle.textColor}; text-align: ${coverStyle.textAlign}; }`;
+            
+            let bookFaces = [];
+            bookFaces.push({ type: 'cover', ...bookDetails });
+            bookFaces.push({ type: 'blank_page' });
+
+            finalPageDetails.forEach(detail => bookFaces.push(detail));
+
+            if ((finalPageDetails.length) % 2 !== 0) {
+                 bookFaces.push({ type: 'blank_page' });
+            }
+
+            let pageHtml = '';
+            for (let i = 0; i < bookFaces.length; i += 2) {
+                const frontItem = bookFaces[i];
+                const backItem = bookFaces[i+1];
+                pageHtml += `
+                    <div class="page">
+                        <div class="front book-page" >${createPageContent(frontItem)}</div>
+                        <div class="back book-page" >${backItem ? createPageContent(backItem) : ''}</div>
+                    </div>`;
+            }
+
+            return `
+                <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${bookDetails.title}</title>
+                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?${fontQuery}&display=swap">
+                <style>
+                    body { font-family: Roboto, sans-serif; margin: 0; background-color: #f0f0f0; display: flex; flex-direction: column; height: 100vh; align-items: center; justify-content: center; overflow: hidden; }
+                    .book-container { width: 100vw; height: 100vh; perspective: 2500px; display: flex; justify-content: center; align-items: center; }
+                    /* --- RTL CHANGE: Book starts on the right, hinges on the right --- */
+                    .book { width: 45vh; /* Aspect ratio for book shape */ height: 60vh; position: relative; transform-style: preserve-3d; transform: rotateY(0deg); transition: transform 0.8s ease; }
+                    .page { width: 100%; height: 100%; position: absolute; top: 0; left: 0; transform-origin: right; transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1); transform-style: preserve-3d; }
+                    .page.flipped { transform: rotateY(180deg); }
+                    .page .front, .page .back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; box-sizing: border-box; }
+                    .page .back { transform: rotateY(-180deg); }
+                    .book-page { overflow: auto; }
+                    .page-content { padding: 25px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; height: 100%; }
+                    .page-content img { max-width: 90%; max-height: 50%; object-fit: contain; margin-top: 100px; }
+                    .cover-content { padding: 30px; } .cover-content h1 { font-size: 2.5em; }
+                    .navigation { position: fixed; bottom: 0; left: 0; right: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 20px; }
+                    .nav-btn { background-color: #5E35B1; color: white; border: none; border-radius: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+                    .nav-btn:disabled { background-color: #BDBDBD; }
+                    #creator-btn { background-color: #00897B; }
+                    ${pageStyles}
+                </style></head><body>
+                <div class="book-container"><div class="book" id="book">${pageHtml}</div></div>
+                <div class="navigation">
+                    <button class="nav-btn" id="prev-button">Previous</button>
+                    <button class="nav-btn" id="next-button">Next</button>
+                    <button class="nav-btn" id="creator-btn">Create Your Own Book</button>
+                </div>
+                <script>
+                    const book = document.getElementById('book');
+                    const pages = document.querySelectorAll('.page');
+                    const prevBtn = document.getElementById('prev-button');
+                    const nextBtn = document.getElementById('next-button');
+                    const creatorBtn = document.getElementById('creator-btn');
+                    const totalPages = pages.length + 1;
+                    let currentPage = 0;
+
+                    function updateBookState() {
+                        // --- RTL CHANGE: Update book position ---
+                        if (currentPage === 0) { book.style.transform = 'translateX(50%) rotateY(0deg)'; }       // Start on right
+                        else if (currentPage === totalPages) { book.style.transform = 'translateX(-50%) rotateY(0deg)'; } // End on left
+                        else { book.style.transform = 'translateX(0%) rotateY(30deg)'; }                           // Centered when open
+                        
+                        pages.forEach((page, index) => {
+                            page.style.zIndex = pages.length - index;
+                            if (index < currentPage) {
+                                page.classList.add('flipped');
+                            } else {
+                                page.classList.remove('flipped');
+                            }
+                        });
+
+                        prevBtn.disabled = currentPage === 0;
+                        nextBtn.disabled = currentPage === totalPages;
+                    }
+                    prevBtn.addEventListener('click', () => { if (currentPage > 0) { currentPage--; updateBookState(); }});
+                    nextBtn.addEventListener('click', () => { if (currentPage < totalPages) { currentPage++; updateBookState(); }});
+                    creatorBtn.addEventListener('click', () => {
+                        const url = '${appUrl}';
+                        if (url === 'YOUR_APPLICATION_URL_HERE') {
+                            alert('This book creator link has not been configured by the owner.');
+                        } else { window.open(url, '_blank'); }
+                    });
+                    updateBookState();
+                <\/script></body></html>`;
+        }
+        
+        function createPageContent(item) {
+             if (item.type === 'cover') {
+                return `<div class="cover-content page-content"><h1>${item.title}</h1><p><strong>By:</strong> ${item.author}</p><p><strong>Published:</strong> ${item.publishDate}</p></div>`;
+            } else if (item.type === 'blank_page') {
+                return ``;
+            } else {
+                return `<div class="page-content"><h2>${item.title || ''}</h2><img src="${item.src}" alt="${item.title || ''}"><p>${item.description || ''}</p></div>`;
+            }
+        }
+    </script>
+</body>
+</html>
