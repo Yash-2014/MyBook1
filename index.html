@@ -114,6 +114,22 @@
     <div class="app-bar">Fancy Image Book Creator</div>
 
     <div class="main-content">
+        
+        <!-- Ad Unit 1 Start -->
+        <div style="text-align: center; margin-bottom: 16px; max-width: 700px; width: 100%;">
+            <script type="text/javascript">
+                atOptions = {
+                    'key' : '5151d99dda1d9483bde7073716b4e6c7',
+                    'format' : 'iframe',
+                    'height' : 60,
+                    'width' : 468,
+                    'params' : {}
+                };
+            </script>
+            <script type="text/javascript" src="//www.highperformanceformat.com/5151d99dda1d9483bde7073716b4e6c7/invoke.js"></script>
+        </div>
+        <!-- Ad Unit 1 End -->
+
         <div id="upload-step" class="card upload-card">
             <h3>Start Here</h3>
             <label for="image-upload" class="upload-label">Upload Your Images</label>
@@ -136,6 +152,14 @@
         </div>
         
         <div id="image-details-container"></div>
+
+        <!-- Ad Unit 2 Start -->
+        <div style="text-align: center; margin-top: 20px; max-width: 700px; width: 100%;">
+            <script async="async" data-cfasync="false" src="//pl26619138.profitableratecpm.com/747fe3a777ea36bae9c74e6d87a82e60/invoke.js"></script>
+            <div id="container-747fe3a777ea36bae9c74e6d87a82e60"></div>
+        </div>
+        <!-- Ad Unit 2 End -->
+
     </div>
 
     <div class="fab-container">
@@ -144,7 +168,7 @@
             <span style="flex-grow: 1; text-align: center; font-weight: 500;" id="step-indicator"></span>
             <button id="next-step-btn">Next</button>
         </div>
-        <button id="share-button" style="display: none;">Create & Download Book</button>
+        <button id="share-button" style="display: none;">Create & Share</button>
     </div>
 
     <script>
@@ -184,7 +208,7 @@
 
         // --- Event Listeners ---
         imageUpload.addEventListener('change', handleImageUpload);
-        shareButton.addEventListener('click', handleDownload);
+        shareButton.addEventListener('click', handleShare);
         prevStepBtn.addEventListener('click', () => navigateEditor(-1));
         nextStepBtn.addEventListener('click', () => navigateEditor(1));
         [coverTemplateSelect, coverFontSelect, coverColorPicker, coverAlignSelect].forEach(el => {
@@ -267,7 +291,8 @@
             }
         }
         
-        function handleDownload() {
+        // --- NEW Smart Share/Download Function ---
+        function handleShare() {
             const bookDetails = {
                 title: document.getElementById('book-title').value || 'My Fancy Image Book',
                 author: document.getElementById('author-name').value || 'Anonymous',
@@ -277,13 +302,22 @@
             const bookHTML = generateBookHTML(bookDetails, coverData, pageData, uniqueFonts);
             const blob = new Blob([bookHTML], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
+            
+            // 1. Trigger the download
             const a = document.createElement('a');
             a.href = url;
             a.download = `${bookDetails.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+
+            // 2. Open WhatsApp with a delay
+            setTimeout(() => {
+                const appUrl = 'YOUR_APPLICATION_URL_HERE'; // This must be replaced!
+                const text = encodeURIComponent(`Check out the book I made! 📖\n\nI'm sending you the file now. You can open it in any browser.\n\nWant to make your own? Use the creator here: ${appUrl}`);
+                window.open(`https://api.whatsapp.com/send?text=${text}`);
+                URL.revokeObjectURL(url); // Clean up the blob URL after a short delay
+            }, 1500); // 1.5 second delay
         }
 
         function readFileAsDataURL(file) {
@@ -330,8 +364,7 @@
                 <style>
                     body { font-family: Roboto, sans-serif; margin: 0; background-color: #f0f0f0; display: flex; flex-direction: column; height: 100vh; align-items: center; justify-content: center; overflow: hidden; }
                     .book-container { width: 100vw; height: 100vh; perspective: 2500px; display: flex; justify-content: center; align-items: center; }
-                    /* --- RTL CHANGE: Book starts on the right, hinges on the right --- */
-                    .book { width: 45vh; /* Aspect ratio for book shape */ height: 60vh; position: relative; transform-style: preserve-3d; transform: rotateY(0deg); transition: transform 0.8s ease; }
+                    .book { width: 45vh; height: 60vh; position: relative; transform-style: preserve-3d; transition: transform 0.8s ease; }
                     .page { width: 100%; height: 100%; position: absolute; top: 0; left: 0; transform-origin: right; transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1); transform-style: preserve-3d; }
                     .page.flipped { transform: rotateY(180deg); }
                     .page .front, .page .back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; box-sizing: border-box; }
@@ -362,10 +395,9 @@
                     let currentPage = 0;
 
                     function updateBookState() {
-                        // --- RTL CHANGE: Update book position ---
-                        if (currentPage === 0) { book.style.transform = 'translateX(50%) rotateY(0deg)'; }       // Start on right
-                        else if (currentPage === totalPages) { book.style.transform = 'translateX(-50%) rotateY(0deg)'; } // End on left
-                        else { book.style.transform = 'translateX(0%) rotateY(30deg)'; }                           // Centered when open
+                        if (currentPage === 0) { book.style.transform = 'translateX(50%) rotateY(0deg)'; }
+                        else if (currentPage === totalPages) { book.style.transform = 'translateX(-50%) rotateY(0deg)'; }
+                        else { book.style.transform = 'translateX(0%) rotateY(-30deg)'; }
                         
                         pages.forEach((page, index) => {
                             page.style.zIndex = pages.length - index;
