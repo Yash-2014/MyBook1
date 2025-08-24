@@ -228,9 +228,7 @@
             const promises = files.map(readFileAsDataURL);
             const dataUrls = await Promise.all(promises);
 
-            pageData = dataUrls.map(src => ({
-                src, title: '', description: '',
-            }));
+            pageData = dataUrls.map(src => ({ src, title: '', description: '' }));
 
             renderPageEditorCards();
             uploadStep.style.display = 'none';
@@ -245,7 +243,7 @@
                 const card = document.createElement('div');
                 card.className = 'card page-editor-card';
                 card.id = `page-editor-${index + 1}`;
-                card.style.display = 'none'; // Hidden by default
+                card.style.display = 'none';
                 card.innerHTML = `
                     <div><div class="page-number">Editing Page ${index + 1}</div><img src="${page.src}" alt="Page ${index + 1} Preview"></div>
                     <div class="inputs">
@@ -291,8 +289,7 @@
             }
         }
         
-        // --- NEW Smart Share/Download Function ---
-        function handleShare() {
+        async function handleShare() {
             const bookDetails = {
                 title: document.getElementById('book-title').value || 'My Fancy Image Book',
                 author: document.getElementById('author-name').value || 'Anonymous',
@@ -301,23 +298,35 @@
             const uniqueFonts = [coverData.style.fontFamily];
             const bookHTML = generateBookHTML(bookDetails, coverData, pageData, uniqueFonts);
             const blob = new Blob([bookHTML], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            
-            // 1. Trigger the download
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${bookDetails.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            const fileName = `${bookDetails.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
+            const appUrl = 'YOUR_APPLICATION_URL_HERE'; // This must be replaced!
+            const shareText = `Check out the book I made! 📖\n\nI'm sending you the file now. You can open it in any browser.\n\nWant to make your own? Use the creator here: ${appUrl}`;
 
-            // 2. Open WhatsApp with a delay
-            setTimeout(() => {
-                const appUrl = 'YOUR_APPLICATION_URL_HERE'; // This must be replaced!
-                const text = encodeURIComponent(`Check out the book I made! 📖\n\nI'm sending you the file now. You can open it in any browser.\n\nWant to make your own? Use the creator here: ${appUrl}`);
-                window.open(`https://api.whatsapp.com/send?text=${text}`);
-                URL.revokeObjectURL(url); // Clean up the blob URL after a short delay
-            }, 1500); // 1.5 second delay
+            // --- NEW Web Share API Logic ---
+            if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: blob.type })] })) {
+                try {
+                    await navigator.share({
+                        files: [new File([blob], fileName, { type: blob.type })],
+                        title: bookDetails.title,
+                        text: shareText,
+                    });
+                } catch (error) {
+                    console.error('Sharing failed:', error);
+                }
+            } else {
+                // --- Fallback for Desktop / Incompatible Browsers ---
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`);
+                    URL.revokeObjectURL(url);
+                }, 1500);
+            }
         }
 
         function readFileAsDataURL(file) {
